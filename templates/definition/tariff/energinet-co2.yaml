@@ -19,15 +19,19 @@ render: |
   tariff: co2
   forecast:
     source: http
-    uri: https://api.energidataservice.dk/dataset/CO2EmisProg?filter={"PriceArea":["{{ .region }}"]}&start=now
+    uri: https://api.energidataservice.dk/dataset/CO2EmisProg?filter={"PriceArea":["{{ .region }}"]}&start=now&sort=Minutes5UTC%20DESC
     jq: |
       [.records[]
         | {
-          start: (.Minutes5UTC[0:13] + ":00:00Z"),
-          end: (.Minutes5UTC[0:13] 
-                | strptime("%Y-%m-%dT%H") 
-                | mktime + 3600 
-                | strftime("%Y-%m-%dT%H:%M:%SZ")),
+          minute: (.Minutes5UTC[14:16]),
+          quarter: ((.Minutes5UTC[14:16] | tonumber) / 15 | floor * 15 | tostring),
+          start: (.Minutes5UTC[0:13] + ":" + ((.Minutes5UTC[14:16] | tonumber) / 15 | floor * 15 | tostring) + ":00Z"),
+          end: (
+            (.Minutes5UTC[0:13] + ":" + ((.Minutes5UTC[14:16] | tonumber) / 15 | floor * 15 | tostring) + ":00Z")
+            | strptime("%Y-%m-%dT%H:%M:%SZ")
+            | mktime + 900
+            | strftime("%Y-%m-%dT%H:%M:%SZ")
+          ),
           value: .CO2Emission
         }
       ]
